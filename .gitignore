@@ -1,0 +1,31 @@
+# macOS
+.DS_Store
+
+# R / RStudio
+.RData
+.Rhistory
+.Rproj.user/
+Rplots.pdf
+
+# VSCode
+.vscode/
+
+# Data & outputs (large files, generated or downloaded)
+Inputs/cache/
+Inputs/IMOS/
+Inputs/*.numbers
+Inputs/*.zip
+Inputs/**/*.shp
+Inputs/**/*.shx
+Inputs/**/*.dbf
+Inputs/**/*.prj
+Outputs/
+*.nc
+
+# Reference PDFs and documents
+*.pdf
+*.docx
+
+# Quarto rendered output
+computations.html
+computations_files/
