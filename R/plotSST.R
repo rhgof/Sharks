@@ -11,9 +11,10 @@ source(codeFile("readIMOSFileListing.R"))
 source(codeFile("chartSST.R"))
 
 {
-  daysPrior = 2
+  daysPrior = 3
 
   theDate = ymd("25-11-27")
+  theDate = today()
   geoScope = "NSW"
   downloadSSTFilesDate(theDate,daysPrior=daysPrior,period="3d")
   sstFiles <- imosSSTFiles()
@@ -44,7 +45,7 @@ source(codeFile("chartSST.R"))
 
   sstChart <- chartSST(sstRast,theTitle,theSubStitle,theRange = c(10,30))
 }
-sstChart <- sstChart + annotate(geom="point", y=-31.8464,x= 152.7489,color="red",size=2)
+#sstChart <- sstChart + annotate(geom="point", y=-31.8464,x= 152.7489,color="red",size=2)
 
 sstChart
 

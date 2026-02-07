@@ -66,4 +66,4 @@ combinedChart <- sstChart + chlChart
 combinedChart
 
 saveFile <- paste0(str_replace_all(paste(today(),city,"Combined-SST-CHL")," ","_"))
-saveHorizChart(saveFile,combinedChart)
+saveSquareChart(saveFile,combinedChart)

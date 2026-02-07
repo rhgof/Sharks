@@ -15,8 +15,9 @@ source(codeFile("animateData.R"))
 source(codeFile("chartCHL.R"))
 
 {
-  daysPrior = 8
+  daysPrior = 5
   theDate = ymd("25-11-27")
+  theDate = today()
   geoScope = "NSW"
   #geoScope = "NSWSthQld"
 
@@ -51,9 +52,10 @@ source(codeFile("chartCHL.R"))
   theSubTitle = paste("Prior",daysPrior,"days average of CHL concentration.GSM Model\nLast satellite pass:",
                       format(lastSatPass,"%Y-%m-%d %Z."),"No data in grey")
 
+
   chlChart <- chartCHL(theRast,theTitle, squishTo = 80,theSubTitle,useLog = TRUE)
-  chlChart <- chlChart + annotate(geom="point", y=-31.8464,x= 152.7489,color="red",size=2)
 }
+#chlChart <- chlChart + annotate(geom="point", y=-31.8464,x= 152.7489,color="red",size=2)
 chlChart
 
 
