@@ -26,6 +26,20 @@ Outputs/
 *.pdf
 *.docx
 
-# Quarto rendered output
+# Quarto
+computations.qmd
 computations.html
 computations_files/
+
+# Shapefile directories and Excel files
+Inputs/AUS_2021_AUST_SHP_GDA2020/
+Inputs/SAL_2021_AUST_GDA2020_SHP/
+Inputs/UCL_2021_AUST_GDA2020_SHP/
+Inputs/*.xlsx
+Inputs/*.xls
+
+# Misc files
+Australia.png
+CH1-4k-8s.txt
+Screenshot*.png
+data
