@@ -83,5 +83,6 @@ reprex({
   units(theRast) <- theUnits
 
   theRast
+  
 
 })
