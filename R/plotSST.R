@@ -1,53 +1,46 @@
 library(tidyverse)
-library(readr)
 library(terra)
 library(tidyterra)
-library(sf)
 
 library(RUtils)
+
 source(codeFile("downloadSSTFiles.R"))
 source(codeFile("readIMOSFileListing.R"))
-
+source(codeFile("usefulExtents.R"))
 source(codeFile("chartSST.R"))
 
 {
-  daysPrior = 3
+  daysPrior <- 5
+  theDate <- today()
+  geoScope <- "NSW"
 
-  theDate = ymd("25-11-27")
-  theDate = today()
-  geoScope = "NSW"
-  downloadSSTFilesDate(theDate,daysPrior=daysPrior,period="3d")
+  # Download and list available files
+  downloadSSTFilesDate(theDate, daysPrior = daysPrior, period = "3d")
   sstFiles <- imosSSTFiles()
 
-#  theDate = min(today(),lastSatDate)
-
   filesOfInterest <- sstFiles |>
-    filter(StartDate %within%  interval(theDate-days(daysPrior),theDate ))
+    filter(StartDate %within% interval(theDate - days(daysPrior), theDate))
 
+  lastSatPass <- max(filesOfInterest$StartDate)
+  firstSatPass <- min(filesOfInterest$StartDate)
 
-  lastSatPass = max(filesOfInterest$StartDate)
-  firstSatPass = min(filesOfInterest$StartDate)
-
-  allSSTRast <-rast(filesOfInterest$FullPath)
-  allSSTRast
-  names(allSSTRast)
-  sstRast <- allSSTRast["sea_surface_temperature"]
-
-  sstRast <- mean(sstRast,na.rm = TRUE )
+  # Load raster, extract SST layer, crop, transform, average
+  sstRast <- rast(filesOfInterest$FullPath)
+  sstRast <- sstRast["sea_surface_temperature"]
+  sstRast <- crop(sstRast, getExtent(geoScope))
+  sstRast <- mean(sstRast, na.rm = TRUE)
   names(sstRast) <- "sea_surface_temperature"
-
-  sstRast <-crop(sstRast,getExtent(geoScope))
-  sstRast <- project(sstRast,GDA2020_CRS) #Australia GDA2020
+  crs(sstRast) <- "EPSG:7844"
   sstRast <- sstRast - 273.15
 
-  theTitle = paste(format(lastSatPass,"%d %b %Y"), "NSW", "Sea Surface Temperature")
-  theSubStitle = paste("Single-sensor multi-satellite SST for prior",daysPrior,"day 24 hour average.\nLast satellite pass:", format(lastSatPass,"%Y-%m-%d %Z."),"No data in grey.")
+  # Build chart
+  theTitle <- paste(format(lastSatPass, "%d %b %Y"), geoScope, "Sea Surface Temperature")
+  theSubTitle <- paste("Single-sensor multi-satellite SST for prior", daysPrior, "day 24 hour average.\nLast satellite pass:",
+                       format(lastSatPass, "%Y-%m-%d %Z."), "No data in grey.")
 
-  sstChart <- chartSST(sstRast,theTitle,theSubStitle,theRange = c(10,30))
+  sstChart <- chartSST(sstRast, theTitle, theSubTitle, theRange = c(10, 30))
 }
-#sstChart <- sstChart + annotate(geom="point", y=-31.8464,x= 152.7489,color="red",size=2)
 
 sstChart
 
-saveVertChart(paste0(geoScope,"-SST-",daysPrior),sstChart,theDate = lastSatPass, onlyLatest=FALSE)
-
+saveVertChart(paste0(geoScope, "-SST-", daysPrior), sstChart, theDate = lastSatPass, onlyLatest = FALSE)
