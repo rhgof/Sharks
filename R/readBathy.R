@@ -7,7 +7,7 @@ library(RUtils)
 
 source(codeFile("usefulExtents.R"))
 source(codeFile("coastsNcities.R"))
-source(codeFile("croptoArea.R"))
+source(codeFile("rastUtilities.R"))
 
 auBathy <- rast("/Volumes/Samples/InputData/GA/Australian Bathymetry and Topography 2023 250m/Australian_Bathymetry_and_Topography_2023_250m_MSL_cog.tif")
 

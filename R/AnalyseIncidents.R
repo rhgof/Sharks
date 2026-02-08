@@ -13,7 +13,7 @@ source(codeFile("readIMOSFileListing.R"))
 source(codeFile("getnetcdfFile.R"))
 source(codeFile("getIncidentRaster.R"))
 source(codeFile("animateData.R"))
-source(codeFile("cropToArea.R"))
+source(codeFile("rastUtilities.R"))
 
 
 sharkIncidents <- readSharkDB()

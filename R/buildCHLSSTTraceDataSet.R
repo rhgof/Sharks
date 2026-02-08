@@ -9,7 +9,7 @@ source(codeFile("downloadCHLFiles.R"))
 source(codeFile("downloadSSTFiles.R"))
 source(codeFile("readIMOSFileListing.R"))
 source(codeFile("usefulExtents.R"))
-source(codeFile("croptoArea.R"))
+source(codeFile("rastUtilities.R"))
 source(codeFile("chartSST.R"))
 source(codeFile("chartCHL.R"))
 
@@ -34,52 +34,6 @@ for (i in 1:nrow(theIncidents)) {
   downloadCHLFilesDate(incident$Incident.Date,daysPrior = 30)
 }
 
-
-chlRasterDateLocation <- function(theDate,lat,lon, daysPrior = 5, theDegrees = 1) {
-
-  downloadCHLFilesDate(theDate,daysPrior)
-  theFiles <- imosCHLFiles()
-
-  repeat {
-    filesOfInterest <- theFiles |>
-      filter(StartDate %within%  interval(theDate-days(daysPrior),theDate ))
-    if (nrow(filesOfInterest) > 0 ) break
-    daysPrior = daysPrior+1
-    print(c("CHL Extending",daysPrior))
-  }
-
-  theRast = rast(filesOfInterest$FullPath)
-
-  theRast <- cropToArea(theRast,lat,lon,theDegrees)
-  theRast
-
-  return (theRast)
-}
-
-
-sstRasterDateLocation <- function(theDate,lat,lon, daysPrior = 1,theDegrees = 1) {
-
-  downloadSSTFilesDate(theDate,daysPrior)
-  theFiles <- imosSSTFiles()
-
-  repeat {
-    filesOfInterest <- theFiles |>
-      filter(StartDate %within%  interval(theDate-days(daysPrior),theDate ))
-    if (nrow(filesOfInterest) > 0 ) break
-    daysPrior = daysPrior+1
-    print(c("SST Extending",daysPrior))
-  }
-
-  theRast = rast(filesOfInterest$FullPath)
-
-  sstName = "sea_surface_temperature"
-  sstRast <- theRast[sstName]
-
-  sstRast<-cropToArea(sstRast,lat,lon, theDegrees)
-  sstRast
-
-  return (sstRast)
-}
 
 rangeDegrees=1
 dataDegrees = 0.2

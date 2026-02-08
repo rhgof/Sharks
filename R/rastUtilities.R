@@ -18,48 +18,52 @@ cropToArea <- function(theRaster,lat,long, degrees = 1) {
 }
 
 
-chlRasterDateLocation <- function(theDate,lat,lon, daysPrior = 5, theDegrees = 1) {
+chlRasterDateLocation <- function(theDate, lat, lon, daysPrior = 5, theDegrees = 1, maxDaysPrior = 30) {
 
-  downloadCHLFilesDate(theDate,daysPrior)
+  downloadCHLFilesDate(theDate, daysPrior)
   theFiles <- imosCHLFiles()
 
   repeat {
     filesOfInterest <- theFiles |>
-      filter(StartDate %within%  interval(theDate-days(daysPrior),theDate ))
-    if (nrow(filesOfInterest) > 0 ) break
-    daysPrior = daysPrior+1
-    print(c("CHL Extending",daysPrior))
+      filter(StartDate %within% interval(theDate - days(daysPrior), theDate))
+    if (nrow(filesOfInterest) > 0) break
+    daysPrior <- daysPrior + 1
+    print(c("CHL Extending", daysPrior))
+    if (daysPrior > maxDaysPrior) {
+      warning(paste("No CHL data found within", maxDaysPrior, "days of", theDate))
+      return(NULL)
+    }
   }
 
-  theRast = rast(filesOfInterest$FullPath)
+  theRast <- rast(filesOfInterest$FullPath)
+  theRast <- cropToArea(theRast, lat, lon, theDegrees)
 
-  theRast <- cropToArea(theRast,lat,lon,theDegrees)
-  theRast
-
-  return (theRast)
+  return(theRast)
 }
 
 
-sstRasterDateLocation <- function(theDate,lat,lon, daysPrior = 1,theDegrees = 1) {
+sstRasterDateLocation <- function(theDate, lat, lon, daysPrior = 1, theDegrees = 1, maxDaysPrior = 30) {
 
-  downloadSSTFilesDate(theDate,daysPrior)
+  downloadSSTFilesDate(theDate, daysPrior)
   theFiles <- imosSSTFiles()
 
   repeat {
     filesOfInterest <- theFiles |>
-      filter(StartDate %within%  interval(theDate-days(daysPrior),theDate ))
-    if (nrow(filesOfInterest) > 0 ) break
-    daysPrior = daysPrior+1
-    print(c("SST Extending",daysPrior))
+      filter(StartDate %within% interval(theDate - days(daysPrior), theDate))
+    if (nrow(filesOfInterest) > 0) break
+    daysPrior <- daysPrior + 1
+    print(c("SST Extending", daysPrior))
+    if (daysPrior > maxDaysPrior) {
+      warning(paste("No SST data found within", maxDaysPrior, "days of", theDate))
+      return(NULL)
+    }
   }
 
-  theRast = rast(filesOfInterest$FullPath)
+  theRast <- rast(filesOfInterest$FullPath)
 
-  sstName = "sea_surface_temperature"
+  sstName <- "sea_surface_temperature"
   sstRast <- theRast[sstName]
+  sstRast <- cropToArea(sstRast, lat, lon, theDegrees)
 
-  sstRast<-cropToArea(sstRast,lat,lon, theDegrees)
-  sstRast
-
-  return (sstRast)
+  return(sstRast)
 }
