@@ -1,73 +1,12 @@
 library(testthat)
 library(tidyverse)
+library(RUtils)
 
-# We test the parsing logic by creating a temp directory with known filenames
-# and sourcing the function. Since imosFiles depends on RUtils only for the
-# default directory path, we can bypass that by passing directory explicitly.
-
-# To avoid needing RUtils at test time, we inline the function
-source_imosFiles <- function() {
-  imosFiles <- function(type = c("CHL", "SST"), directory = NULL) {
-    type <- match.arg(type)
-
-    if (is.null(directory)) {
-      directory <- "/Volumes/Samples/InputData/cache"
-    }
-
-    listing <- dir(directory, full.names = FALSE)
-
-    if (type == "CHL") {
-      theFiles <- as_tibble(listing) |>
-        rename(FileName = value) |>
-        mutate(Path = directory) |>
-        mutate(FullPath = paste(directory, FileName, sep = "/")) |>
-        filter(str_detect(FileName, "^V\\.P1D")) |>
-        mutate(StartDate = str_extract(FileName, "P1D\\.(\\d{8})", group = 1)) |>
-        mutate(EndDate = StartDate) |>
-        mutate(MethodShort = str_to_upper(str_extract(FileName, "_([:alpha:]+)\\.nc", group = 1))) |>
-        mutate(MethodLong = MethodShort) |>
-        mutate(Period = "DAY") |>
-        mutate(Gridkm = 1) |>
-        mutate(Channel = str_to_upper(str_extract(FileName, "\\.([:alnum:]+)_[:alnum:]+\\.nc", group = 1)))
-    } else {
-      filePattern <- "ABOM-L3S_GHRSST-SSTfnd-[:alnum:]+-3d_dn.nc$"
-      theFiles <- as_tibble(listing) |>
-        rename(FileName = value) |>
-        mutate(Path = directory) |>
-        mutate(FullPath = paste(directory, FileName, sep = "/")) |>
-        filter(str_detect(FileName, filePattern)) |>
-        mutate(StartDate = str_extract(FileName, "^(\\d{8})", group = 1)) |>
-        mutate(EndDate = StartDate) |>
-        mutate(GridDegree = 0.02) |>
-        mutate(Period = str_to_upper(str_extract(FileName, "-([:alnum:]+)_[:alpha:]+\\.nc$", group = 1)))
-    }
-
-    theFiles <- theFiles |>
-      mutate(StartDate = ymd(StartDate, tz = "UTC")) |>
-      mutate(EndDate = ymd(EndDate, tz = "UTC")) |>
-      mutate(Interval = StartDate %--% EndDate)
-
-    if (type == "CHL") {
-      theFiles <- theFiles |>
-        mutate(PeriodLong = case_when(
-          Period == "8D" ~ "8 Days",
-          Period == "MO" ~ "Monthly",
-          Period == "DAY" ~ "Daily",
-          .default = "Unknown"
-        )) |>
-        mutate(Title = paste(
-          paste0(StartDate, " to ", EndDate),
-          paste0(Gridkm, "km"), PeriodLong, MethodShort, Channel
-        ))
-    }
-
-    return(theFiles)
-  }
-  return(imosFiles)
-}
+# Ensure wd is project root so codeFile() resolves correctly
+if (basename(getwd()) == "tests") setwd("..")
+source(codeFile("readIMOSFileListing.R"))
 
 test_that("imosFiles parses CHL filenames correctly", {
-  imosFiles <- source_imosFiles()
   tmp <- tempdir()
   test_dir <- file.path(tmp, "imos_test_chl")
   dir.create(test_dir, showWarnings = FALSE)
@@ -91,7 +30,6 @@ test_that("imosFiles parses CHL filenames correctly", {
 })
 
 test_that("imosFiles parses SST filenames correctly", {
-  imosFiles <- source_imosFiles()
   tmp <- tempdir()
   test_dir <- file.path(tmp, "imos_test_sst")
   dir.create(test_dir, showWarnings = FALSE)
@@ -113,7 +51,6 @@ test_that("imosFiles parses SST filenames correctly", {
 })
 
 test_that("imosFiles returns empty tibble for empty directory", {
-  imosFiles <- source_imosFiles()
   tmp <- tempdir()
   test_dir <- file.path(tmp, "imos_test_empty")
   dir.create(test_dir, showWarnings = FALSE)
@@ -127,12 +64,10 @@ test_that("imosFiles returns empty tibble for empty directory", {
 })
 
 test_that("imosFiles type argument validates correctly", {
-  imosFiles <- source_imosFiles()
   expect_error(imosFiles("INVALID"), "'arg' should be one of")
 })
 
 test_that("CHL and SST wrappers are equivalent to direct calls", {
-  imosFiles <- source_imosFiles()
   tmp <- tempdir()
   test_dir <- file.path(tmp, "imos_test_wrappers")
   dir.create(test_dir, showWarnings = FALSE)
@@ -140,10 +75,6 @@ test_that("CHL and SST wrappers are equivalent to direct calls", {
 
   file.create(file.path(test_dir, "V.P1D.20230915T053000Z.aust.chl_gsm.nc"))
   file.create(file.path(test_dir, "20230915092000-ABOM-L3S_GHRSST-SSTfnd-MultiSensor-3d_dn.nc"))
-
-  # Verify the wrapper pattern works
-  imosCHLFiles <- function(directory = NULL) imosFiles("CHL", directory)
-  imosSSTFiles <- function(directory = NULL) imosFiles("SST", directory)
 
   expect_equal(
     imosFiles("CHL", test_dir),

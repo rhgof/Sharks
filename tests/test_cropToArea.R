@@ -1,15 +1,11 @@
 library(testthat)
 library(terra)
+library(tidyverse)
+library(RUtils)
 
-# Source just the function definition, not its dependencies
-# We extract cropToArea directly since it has no external deps beyond terra
-cropToArea <- function(theRaster, lat, long, degrees = 1) {
-  theArea <- ext(long - degrees, long + degrees, lat - degrees, lat + degrees)
-  theUnits <- units(theRaster)
-  croppedRast <- crop(theRaster, theArea)
-  units(croppedRast) <- theUnits
-  return(croppedRast)
-}
+# Ensure wd is project root so codeFile() resolves correctly
+if (basename(getwd()) == "tests") setwd("..")
+source(codeFile("rastUtilities.R"))
 
 test_that("cropToArea produces correct extent", {
   r <- rast(nrows = 100, ncols = 100, xmin = 140, xmax = 160, ymin = -40, ymax = -20)
