@@ -1,0 +1,9 @@
+linters: linters_with_defaults(
+    line_length_linter(120),
+    object_name_linter(styles = c("snake_case", "camelCase", "SNAKE_CASE")),
+    commented_code_linter = NULL,
+    cyclocomp_linter = cyclocomp_linter(25)
+  )
+exclusions: list(
+    "tests/"
+  )

@@ -13,112 +13,100 @@ source(codeFile("rastUtilities.R"))
 source(codeFile("chartSST.R"))
 source(codeFile("chartCHL.R"))
 
-sharkIncidents <- readSharkDB()
+shark_incidents <- readSharkDB()
 
-earliestSatDate <- ymd("2002-07-01")
+earliest_sat_date <- ymd("2002-07-01")
 
-theIncidents <- sharkIncidents |>
-  filter(Incident.Date >= earliestSatDate) |>
+incidents <- shark_incidents |>
+  filter(Incident.Date >= earliest_sat_date) |>
   filter(State == "NSW") |>
   filter(Shark.common.name == "white shark")
 
-
-theIncidents <- theIncidents |>
+incidents <- incidents |>
   filter(UIN %in% c(1193))
-# get and cache all the data
-for (i in 1:nrow(theIncidents)) {
-  incident <- theIncidents[i,]
 
-  downloadSSTFilesDate(incident$Incident.Date,daysPrior = 3)
-  downloadCHLFilesDate(incident$Incident.Date,daysPrior = 6)
+# Pre-download and cache all satellite data
+for (i in 1:nrow(incidents)) {
+  incident <- incidents[i, ]
+  downloadSSTFilesDate(incident$Incident.Date, daysPrior = 3)
+  downloadCHLFilesDate(incident$Incident.Date, daysPrior = 6)
 }
 
+range_degrees <- 1
+attack_degrees <- 0.2
 
-rangeDegrees=1
-dataDegrees = 0.2
+attack_profiles <- NULL
+for (i in 1:nrow(incidents)) {
+  inc <- incidents[i, ]
+  message(paste(inc$UIN, inc$Incident.Date, inc$Location))
+  date <- inc$Incident.Date
+  lat <- inc$Latitude
+  lon <- inc$Longitude
 
-i=64
-attackProfiles = NULL
-for (i in 1:nrow(theIncidents)) {
-#for (i in 1:10) {
-  inc = theIncidents[i,]
-  inc
-  print(inc)
-  theDate = inc$Incident.Date
-  lat = inc$Latitude
-  lon = inc$Longitude
+  result <- extractOceanographicStats(
+    date = date, lat = lat, lon = lon,
+    chl_days_prior = 6, sst_days_prior = 3,
+    range_degrees = range_degrees, attack_degrees = attack_degrees
+  )
+  if (is.null(result)) next
 
-  chlRast <- chlRasterDateLocation(theDate,lat,lon, daysPrior = 6, theDegrees = rangeDegrees)
-  chlUnit = units(chlRast)[1]
-  chlRast
-  chlDays = nlyr(chlRast)
-  chlRast <- mean(chlRast,na.rm=TRUE)
+  chl_rast <- result$chl_rast
+  sst_rast <- result$sst_rast
+  s <- result$stats
 
-  chlMin = global(chlRast,"min",na.rm=TRUE)[[1]]
-  chlMean = global(chlRast,"mean",na.rm=TRUE)[[1]]
-  chlMax= global(chlRast,"max",na.rm=TRUE)[[1]]
+  # --- CHL chart ---
+  title <- paste(inc$Incident.Date, str_to_title(inc$Location))
+  subtitle <- paste(
+    "Chlorophyll Concentration mg/m^3: Mean", round(s$CHL_mean, 1),
+    "Max", round(s$CHL_max, 1), "Min", round(s$CHL_min, 1),
+    "\nNear Attack: Mean", round(s$CHLAttack_mean, 1),
+    "Max", round(s$CHLAttack_max, 1), "Min", round(s$CHLAttack_min, 1)
+  )
+  chl_chart <- chartCHL(chl_rast, title, subtitle, useLog = TRUE) +
+    geom_point(aes(x = lon, y = lat), size = 3, color = "black") +
+    geom_rect(aes(xmin = lon - attack_degrees, xmax = lon + attack_degrees,
+                  ymin = lat - attack_degrees, ymax = lat + attack_degrees),
+              linewidth = 0.1, color = "black", fill = NA)
 
+  # --- SST chart ---
+  set.names(sst_rast, "sea_surface_temperature")
+  title <- paste(inc$Incident.Date, str_to_title(inc$Location))
+  subtitle <- paste(
+    "Sea Surface Temperature \u00B0C: Mean", round(s$SST_mean, 1),
+    "Max", round(s$SST_max, 1), "Min", round(s$SST_min, 1),
+    "\nNear Attack: Mean", round(s$SSTAttack_mean, 1),
+    "Max", round(s$SSTAttack_max, 1), "Min", round(s$SSTAttack_min, 1)
+  )
+  sst_chart <- chartSST(sst_rast, title, subtitle) +
+    geom_point(aes(x = lon, y = lat), size = 3, color = "black") +
+    geom_rect(aes(xmin = lon - attack_degrees, xmax = lon + attack_degrees,
+                  ymin = lat - attack_degrees, ymax = lat + attack_degrees),
+              linewidth = 0.1, color = "black", fill = NA)
 
-  sstRast <- sstRasterDateLocation(theDate, lat, lon, daysPrior=3, theDegrees = rangeDegrees)
-  sstRast <- sstRast - 273.15
-  sstDays = nlyr(sstRast)
+  # --- Combined chart ---
+  combined_chart <- sst_chart + chl_chart
+  save_file <- paste0(
+    str_replace_all(
+      paste(inc$Incident.Date, "SST-CHL",
+            paste0(round(range_degrees, 1), "-degree"),
+            str_replace_all(str_to_title(inc$Location), ",", ""),
+            sep = "_"),
+      " ", "-"),
+    ".png"
+  )
+  saveHorizChart(save_file, combined_chart)
 
-  sstRast
-  sstRast <- mean(sstRast,na.rm=TRUE)
+  # --- Build profile row ---
+  attack_profile <- result$stats |>
+    mutate(
+      UIN = inc$UIN, IncidentDate = date, State = inc$State,
+      Location = inc$Location, Lat = lat, Lon = lon,
+      SharkCommonName = inc$Shark.common.name,
+      .before = 1
+    )
 
-
-  sstMin = global(sstRast,"min",na.rm=TRUE)[[1]]
-  sstMean = global(sstRast,"mean",na.rm=TRUE)[[1]]
-  sstMax= global(sstRast,"max",na.rm=TRUE)[[1]]
-
-
-  chlRastAttack = cropToArea(chlRast,lat,lon,degrees = dataDegrees)
-  chlAttackMin = global(chlRastAttack,"min",na.rm=TRUE)[[1]]
-  chlAttackMean = global(chlRastAttack,"mean",na.rm=TRUE)[[1]]
-  chlAttackMax= global(chlRastAttack,"max",na.rm=TRUE)[[1]]
-
-  sstRastAttack = cropToArea(sstRast,lat,lon,degrees = dataDegrees)
-  sstAttackMin = global(sstRastAttack,"min",na.rm=TRUE)[[1]]
-  sstAttackMean = global(sstRastAttack,"mean",na.rm=TRUE)[[1]]
-  sstAttackMax= global(sstRastAttack,"max",na.rm=TRUE)[[1]]
-
-  theTitle = paste(inc$Incident.Date,str_to_title(inc$Location))
-  theSubTitle = paste("Chlorophyll Concentration mg/m^3: Mean",round(chlMean,1),"Max",round(chlMax,1),"Min",round(chlMin,1),
-                      "\nNear Attack: Mean",round(chlAttackMean,1),"Max",round(chlAttackMax,1),"Min",round(chlAttackMin,1))
-  chlChart <- chartCHL(chlRast,theTitle, theSubTitle,useLog = TRUE) +
-    geom_point(mapping = aes(x= inc$Longitude,y=inc$Latitude),size=3,color="black") +
-    geom_rect(mapping = aes(xmin = lon-dataDegrees,xmax = lon+dataDegrees,ymin=lat-dataDegrees, ymax=lat+dataDegrees),linewidth = 0.1,color="black", fill=NA)
-  chlChart
-
-
-  set.names(sstRast,"sea_surface_temperature")
-  theTitle = paste(inc$Incident.Date,str_to_title(inc$Location))
-  theSubTitle = paste("Sea Surface Temperature \u00B0C: Mean",round(sstMean,1),"Max",round(sstMax,1),"Min",round(sstMin,1),
-                      "\nNear Attack: Mean",round(sstAttackMean,1),"Max",round(sstAttackMax,1),"Min",round(sstAttackMin,1))
-
-  sstChart <- chartSST(sstRast,theTitle,theSubTitle) +
-    geom_point(mapping = aes(x= lon, y=lat),size=3,color="black") +
-    geom_rect(mapping = aes(xmin = lon-dataDegrees,xmax = lon+dataDegrees,ymin=lat-dataDegrees, ymax=lat+dataDegrees),linewidth = 0.1,color="black", fill=NA)
-  sstChart
-
-  combinedChart <- sstChart + chlChart
-  combinedChart
-  saveFile <- paste0(str_replace_all(paste(inc$Incident.Date,"SST-CHL",paste0(round(rangeDegrees,1),"-degree"),str_replace_all(str_to_title(inc$Location),",",""),sep="_")," ","-"),".png")
-  saveHorizChart(saveFile,combinedChart)
-
-
-
-  attackProfile = tribble(
-    ~UIN, ~IncidentDate, ~State, ~Location, ~Lat, ~Lon, ~SharkCommonName,
-    ~CHL_min, ~CHL_max, ~CHL_mean, ~CHLAttack_min, ~CHLAttack_max, ~CHLAttack_mean, ~CHL_unit, ~CHL_days,
-    ~SST_min, ~SST_max, ~SST_mean, ~SSTAttack_min, ~SSTAttack_max, ~SSTAttack_mean, ~SST_Unit, ~SST_days, ~RangeDegrees, ~DataDegrees,
-    inc$UIN, theDate, inc$State, inc$Location, lat, lon, inc$Shark.common.name,
-    chlMin, chlMax, chlMean, chlAttackMin, chlAttackMax, chlAttackMean, chlUnit, chlDays,
-    sstMin,sstMax,sstMean,sstAttackMin, sstAttackMax, sstAttackMean,"\u00B0C", sstDays,rangeDegrees, dataDegrees )
-
-  attackProfiles <- attackProfiles |>
-    bind_rows(attackProfile)
-
+  attack_profiles <- attack_profiles |>
+    bind_rows(attack_profile)
 }
 
-write_csv(attackProfiles,inputFile(paste0("SharkIncidents-SST-SHL-",rangeDegrees,"Deg.csv")))
+write_csv(attack_profiles, inputFile(paste0("SharkIncidents-SST-CHL-", range_degrees, "Deg.csv")))
