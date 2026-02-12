@@ -17,22 +17,22 @@ ncFiles <- function(directory = NULL,ObsPeriod = "month") {
  # L3m_20041101-20041130__211308274_4_AVW-MERMODSWF_CHL1_8D_00.nc
 
    theFiles <- as_tibble(listing) |>
-     rename(FileName = value) |>
-     filter(str_detect(FileName,"^L3m") ) |>
+     rename(`FileName` = value) |>
+     filter(str_detect(`FileName`,"^L3m") ) |>
      mutate(Path = directory) |>
-     mutate(StartDate = str_extract(FileName, "_(\\d{8})",group=1)) |>
-     mutate(Gridkm = str_extract(FileName, "_(\\d{1,2})_",group=1)) |>
-     mutate(MethodShort = str_extract(FileName, "_([:alpha:]+)-[:alpha:]+_",group=1)) |>
-     mutate(MethodLong = str_extract(FileName, "_([:alpha:]+-[:alpha:]+)_",group=1)) |>
-     mutate(Period = str_extract(FileName,"_([:alnum:]+)_\\d+\\.nc",group=1)) |>
-     mutate(Channel = str_extract(FileName,"_([:alpha:]+)\\d*_[:alnum:]+_\\d+\\.nc",group=1))
+     mutate(StartDate = str_extract(`FileName`, "_(\\d{8})",group=1)) |>
+     mutate(Gridkm = str_extract(`FileName`, "_(\\d{1,2})_",group=1)) |>
+     mutate(MethodShort = str_extract(`FileName`, "_([:alpha:]+)-[:alpha:]+_",group=1)) |>
+     mutate(MethodLong = str_extract(`FileName`, "_([:alpha:]+-[:alpha:]+)_",group=1)) |>
+     mutate(Period = str_extract(`FileName`,"_([:alnum:]+)_\\d+\\.nc",group=1)) |>
+     mutate(Channel = str_extract(`FileName`,"_([:alpha:]+)\\d*_[:alnum:]+_\\d+\\.nc",group=1))
 
      theFiles <- theFiles |>
        mutate(EndDate = case_when (
-         Period == "8D" ~ str_extract(FileName, "-(\\d{8})__",group=1),
-         Period == "MO" ~ str_extract(FileName, "-(\\d{8})__",group=1),
-         Period == "DAY" ~ str_extract(FileName, "_(\\d{8})",group=1),
-         .default = str_extract(FileName, "-(\\d{8})__",group=1)
+         Period == "8D" ~ str_extract(`FileName`, "-(\\d{8})__",group=1),
+         Period == "MO" ~ str_extract(`FileName`, "-(\\d{8})__",group=1),
+         Period == "DAY" ~ str_extract(`FileName`, "_(\\d{8})",group=1),
+         .default = str_extract(`FileName`, "-(\\d{8})__", group=1)
        )
        )
 
