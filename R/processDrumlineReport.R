@@ -19,14 +19,19 @@ DRUMLINE_CSV_NAMES <- c(
 #' @return A tibble with all years combined
 processDrumlineReports <- function(pdf_paths = DRUMLINE_PDFS) {
   all_data <- map(pdf_paths, function(pdf_path) {
-    data <- readDrumlineReports(pdf_path)
-
     csv_name <- DRUMLINE_CSV_NAMES[pdf_path]
     if (is.na(csv_name)) {
       csv_name <- paste0(tools::file_path_sans_ext(basename(pdf_path)), "_cleaned.csv")
     }
     csv_path <- inputFile(csv_name)
 
+    if (file.exists(csv_path)) {
+      data <- read_csv(csv_path, show_col_types = FALSE)
+      message(sprintf("Read %d rows from existing %s", nrow(data), csv_name))
+      return(data)
+    }
+
+    data <- readDrumlineReports(pdf_path)
     write_csv(data, csv_path)
     message(sprintf("Wrote %d rows to %s", nrow(data), csv_name))
 

@@ -58,7 +58,7 @@ preparePeriodData <- function(data, period) {
 # ----- shared theme for drumline charts -----
 drumlineChartTheme <- function() {
   list(
-    labs(caption = makeCaption("Source: NSW DPI SMART Drumline Program 2023-24")),
+    labs(caption = makeCaption("Source: NSW DPI SMART Drumline Program")),
     customTheme(),
     theme(
       plot.title.position = "plot",
